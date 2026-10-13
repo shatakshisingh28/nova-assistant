@@ -1,53 +1,132 @@
-# Nova Desktop Starter
+# Nova: Virtual AI Assistant
 
-A purple Tkinter desktop assistant with streaming AI generation, optional Groq-first/Gemini-second fallback, SQLite chat/task/note/memory storage, push-to-talk voice, speech output, and a small allowlist of safe local commands.
+A voice assistant and chatbot in one, built in Python. Say (or type) a quick
+command like "set a timer for 10 minutes" and it runs locally. Ask anything
+else and it answers through an LLM running on [Groq](https://groq.com).
 
-## Install (Windows / PowerShell)
+## Features
 
-Use Python 3.10+ (Python 3.11 recommended). In this folder run:
+- Voice input (microphone) and spoken replies, or plain typing with `--text`
+- Quick local commands: time and date, weather, web search, YouTube, Wikipedia,
+  notes, to-do list, timers, reminders, calculator
+- Chatbot for everything else, with memory of the last few turns
+- Falls back to typing automatically if the microphone can't be opened
 
-```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-Copy-Item .env.example .env
-notepad .env
+## Requirements
+
+- Python 3.9 or newer
+- A microphone (only for voice mode)
+- A free Groq API key (only for the chatbot; quick commands work without it)
+
+## Setup
+
+### 1. Get the files
+
+Extract the zip, then open a terminal **inside** the extracted `nova-assistant`
+folder. On Windows, open the folder in File Explorer, click the address bar,
+type `cmd` and press Enter. Run `dir` to confirm you can see `main.py` and
+`requirements.txt`.
+
+### 2. Install the packages
+
+```bash
+python -m pip install -r requirements.txt
 ```
 
-Add a key to `.env`. Get a Groq key from https://console.groq.com/. To enable fallback, also configure a Gemini API key from https://aistudio.google.com/. API free tiers, model availability and quotas change; check the provider console if a model fails. Keep `.env` private and never commit it.
+PyAudio (microphone access) is the usual sticking point:
+
+| System | Fix |
+|---|---|
+| Windows | `python -m pip install pipwin`, then `python -m pipwin install pyaudio` |
+| macOS | `brew install portaudio`, then `pip install PyAudio` |
+| Linux | `sudo apt install portaudio19-dev python3-pyaudio espeak`, then `pip install PyAudio` |
+
+If PyAudio won't install, install the rest with
+`python -m pip install SpeechRecognition pyttsx3 groq requests` and run Nova
+in `--text` mode.
+
+### 3. Add your Groq API key
+
+1. Create a key at https://console.groq.com/keys
+2. Set it as an environment variable:
+
+```bash
+# Windows (Command Prompt). Close and reopen the terminal afterwards.
+setx GROQ_API_KEY "your-key-here"
+
+# macOS / Linux
+export GROQ_API_KEY="your-key-here"
+```
+
+Keep the key private. Never paste it into the code or upload it to GitHub.
 
 ## Run
 
-```powershell
-python app.py
+```bash
+python main.py              # voice mode
+python main.py --text       # type instead of speaking (good for a first test)
+python main.py --mute       # no spoken replies
+python main.py --wake nova  # only react when you say "nova ..."
+python main.py --lang hi-IN # speech recognition language (default en-IN)
 ```
 
-If PyAudio installation fails, remove `PyAudio` from `requirements.txt`, reinstall, and use text input until voice is configured. Tkinter normally ships with standard Windows Python installers.
+## What you can say
 
-## Commands
+| Say | What happens |
+|---|---|
+| "what time is it" / "today's date" | Tells you |
+| "open youtube" / "open github" | Opens the site |
+| "search python decorators" | Google search |
+| "play lo-fi music" | YouTube search |
+| "wikipedia Alan Turing" | Two-sentence summary |
+| "weather in Mumbai" | Current weather |
+| "note buy a laptop stand" / "show my notes" | Saves / reads notes |
+| "add task finish SQL practice" / "my tasks" / "done 1" | To-do list |
+| "set a timer for 5 minutes" | Spoken alert when done |
+| "remind me in 30 minutes to drink water" | Spoken reminder |
+| "calculate 45 times 12" | Maths |
+| "help" | Lists what Nova can do |
+| anything else | Answered by the chatbot |
+| "bye" | Exit |
 
-- `help`, `time`, `date`
-- `open YouTube`, `open GitHub`, `open Gmail`
-- `search Python decorators`
-- `calculate 45 * 12`
-- `add task finish SQL practice`, `my tasks`, `done 1`
-- `note project idea`, `show notes`
-- `remember that I prefer Python`, `what do you remember`, `forget memories`
+## Settings (optional environment variables)
 
-Anything else goes to the configured AI providers. SQLite data is stored in `~/.nova/nova.sqlite3` by default.
+| Variable | Purpose | Default |
+|---|---|---|
+| `GROQ_API_KEY` | Enables the chatbot | none |
+| `GROQ_MODEL` | Which Groq model to use | `llama-3.3-70b-versatile` |
+| `NOVA_CITY` | Default city for weather | `New Delhi` |
+| `NOVA_DATA_DIR` | Where notes and tasks are saved | `~/.nova` |
 
-## Roadmap
+Groq retires and adds models over time. If the chatbot starts failing with a
+"model not found" style error, pick a current model from
+https://console.groq.com/docs/models and set `GROQ_MODEL` to its name.
 
-1. Install and test desktop UI and local commands before configuring AI.
-2. Add Groq key and verify streaming API access; add Gemini only as a second configured provider.
-3. Add incremental token display in the UI (current version receives streamed chunks but shows the finished answer at once).
-4. Improve voice with a visible listening state, cancel button and offline speech recognition if needed.
-5. Add due dates and scheduled reminders to the SQLite task table.
-6. Add more automation only through an explicit allowlist and confirmation dialog.
-7. Add settings panel for model selection, voice rate, and data controls.
-8. Package with PyInstaller only after the app is stable.
+## Project files
 
-## Safety
+- `main.py`: the main loop (listen, try quick commands, otherwise ask the chatbot, speak)
+- `skills.py`: local commands; add your own function and list it in `handle()`
+- `brain.py`: the Groq chatbot and its personality (`SYSTEM_PROMPT`)
+- `speech.py`: microphone input and text-to-speech
+- `requirements.txt`: Python packages
 
-Nova opens only allowlisted websites and does not execute arbitrary shell commands. Keep this boundary. Never let model output directly run terminal commands, delete files, or send messages without explicit user confirmation.
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `Could not open requirements file` | You're in the wrong folder. `cd` into the folder that contains `requirements.txt` |
+| PyAudio fails to install | See the table in Setup, or use `--text` mode |
+| "microphone unavailable" | Check the mic is plugged in and allowed in system privacy settings |
+| "chat brain offline" | `GROQ_API_KEY` isn't set. Set it, then reopen the terminal |
+| "couldn't reach the AI service" | Check internet, API key and the `GROQ_MODEL` name |
+| Speech recognition never hears you | Speak after "calibrating" finishes; reduce background noise |
+
+Voice recognition uses Google's free web speech service, so it needs an
+internet connection.
+
+## Ideas to extend it
+
+- Answer questions about a CSV file (fits a data analyst portfolio nicely)
+- Read and send email, or check your calendar
+- A web or Tkinter front end
+- Offline or Groq-hosted Whisper for speech recognition
